@@ -1,0 +1,377 @@
+package binance
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"reflect"
+	"strings"
+	"sync"
+	"time"
+
+	. "github.com/youjianglong/exchanges/common"
+
+	"github.com/youjianglong/exchanges/errorx"
+
+	"github.com/youjianglong/exchanges/ws"
+)
+
+// WsPublicBaseService 现货公共行情WebSocket服务
+type WsPublicBaseService struct {
+	name         string
+	baseUrl      string
+	httpClient   *http.Client
+	logger       *slog.Logger
+	KeepInterval time.Duration
+	PongTimeout  time.Duration
+	channels     map[string]ws.WsHandler
+	channelMu    sync.RWMutex
+	ws           *ws.Websocket
+}
+
+func (s *WsPublicBaseService) SetHttpClient(httpClient *http.Client) *WsPublicBaseService {
+	s.httpClient = httpClient
+	if s.ws != nil {
+		s.ws.SetHttpClient(httpClient)
+	}
+	return s
+}
+
+func (s *WsPublicBaseService) Subscribe(channel string, handler ws.WsHandler) *WsPublicBaseService {
+	s.channelMu.Lock()
+	s.channels[channel] = handler
+	s.channelMu.Unlock()
+	if s.ws != nil {
+		s.subscribe(channel)
+	}
+	return s
+}
+
+func (s *WsPublicBaseService) Unsubscribe(channel string) *WsPublicBaseService {
+	s.channelMu.Lock()
+	delete(s.channels, channel)
+	s.channelMu.Unlock()
+	if s.ws != nil {
+		s.unsubscribe(channel)
+	}
+	return s
+}
+
+func (s *WsPublicBaseService) subscribe(channels ...string) {
+	data := map[string]any{
+		"method": "SUBSCRIBE",
+		"params": channels,
+		"id":     time.Now().UnixNano(),
+	}
+	err := s.ws.WriteJSON(data)
+	if err != nil {
+		s.logger.Error(fmt.Sprintf("write json: %v", err))
+		return
+	}
+}
+
+func (s *WsPublicBaseService) unsubscribe(channels ...string) {
+	data := map[string]any{
+		"method": "UNSUBSCRIBE",
+		"params": channels,
+		"id":     time.Now().UnixNano(),
+	}
+	err := s.ws.WriteJSON(data)
+	if err != nil {
+		s.logger.Error(fmt.Sprintf("write json: %v", err))
+		return
+	}
+}
+
+func (s *WsPublicBaseService) Start() error {
+	if s.ws != nil {
+		s.ws.Stop()
+		s.ws = nil
+	}
+	s.ws = ws.NewWebsocket(s.baseUrl, s.handleMsg, s.handleError, s.keepAlive).
+		SetPrevConnect(s.prevConnect).SetHttpClient(s.httpClient)
+	// TODO 设置logger
+	return s.ws.Start()
+}
+
+// prevConnect 设置连接前的操作
+func (s *WsPublicBaseService) prevConnect(ws *ws.Websocket) error {
+	s.logger.Info("init connect: " + s.name)
+	var streams []string
+	s.channelMu.RLock()
+	for stream := range s.channels {
+		streams = append(streams, stream)
+	}
+	s.channelMu.RUnlock()
+	endpoint := fmt.Sprintf("%s%s", s.baseUrl, strings.Join(streams, "/"))
+	ws.SetEndpoint(endpoint)
+	return nil
+}
+
+type combinedEvent struct {
+	Stream string          `json:"stream,omitempty"`
+	Data   json.RawMessage `json:"data,omitempty"`
+
+	Id     int             `json:"id,omitempty"`
+	Result json.RawMessage `json:"result,omitempty"`
+}
+
+func (s *WsPublicBaseService) handleMsg(msg []byte) {
+	var event combinedEvent
+	err := json.Unmarshal(msg, &event)
+	if err != nil {
+		s.logger.Error(fmt.Sprintf("unmarshal message: %v", err))
+		return
+	}
+	if event.Stream != "" {
+		s.channelMu.RLock()
+		h, ok := s.channels[event.Stream]
+		s.channelMu.RUnlock()
+		if !ok {
+			s.logger.Error(fmt.Sprintf("channel %s not found", event.Stream))
+			return
+		}
+		h(event.Data)
+		return
+	}
+	if event.Id != 0 {
+		s.logger.Info(fmt.Sprintf("id: %d, result: %s", event.Id, string(event.Result)))
+	}
+}
+
+func (s *WsPublicBaseService) handleError(err error) {
+	fr := errorx.GetFrame(1)
+	s.logger.Error(fmt.Sprintf("%v at %s:%d", err, fr.File, fr.Line))
+}
+
+func (s *WsPublicBaseService) keepAlive(ws *ws.Websocket) {
+	ticker := time.NewTicker(s.KeepInterval)
+	timeout := s.KeepInterval * 3
+
+	lastResponse := time.Now()
+
+	ws.SetOnPingReceived(func(ctx context.Context, message []byte) bool {
+		lastResponse = time.Now()
+		return true
+	})
+
+	go func() {
+		defer ticker.Stop()
+		for {
+			<-ticker.C
+			if time.Since(lastResponse) > timeout {
+				s.logger.Debug("keep alive timeout")
+				ws.Restart()
+				return
+			}
+		}
+	}()
+}
+
+func (s *WsPublicBaseService) Stop() {
+	if s.ws != nil {
+		s.ws.Stop()
+		s.ws = nil
+	}
+}
+
+func getTypeName[T any]() string {
+	var t T
+	return reflect.TypeOf(t).Name()
+}
+
+func wsHandleWrapper[T any](logger *slog.Logger, handler func(event T)) func(data []byte) {
+	name := getTypeName[T]()
+	return func(data []byte) {
+		var event T
+		err := json.Unmarshal(data, &event)
+		if err != nil {
+			logger.Error(fmt.Sprintf("unmarshal %s message: %v", name, err))
+			return
+		}
+		handler(event)
+	}
+}
+
+type WsSpotPublicService struct {
+	*WsPublicBaseService
+}
+
+func NewWsSpotPublicService(baseUrl string) WsSpotPublicService {
+	if baseUrl == "" {
+		baseUrl = BaseSpotCombinedMainURL
+	}
+	s := &WsPublicBaseService{
+		name:         "spot_public",
+		baseUrl:      baseUrl,
+		logger:       slog.Default(),
+		channels:     make(map[string]ws.WsHandler),
+		KeepInterval: 60 * time.Second,
+		PongTimeout:  10 * time.Second,
+	}
+	return WsSpotPublicService{s}
+}
+
+// WsMiniTickerEvent define websocket market mini-ticker statistics event
+type WsMiniTickerEvent struct {
+	Event       string  `json:"e"` // 事件类型
+	Time        int64   `json:"E"` // 事件时间
+	Symbol      string  `json:"s"` // 交易对
+	LastPrice   Float64 `json:"c"` // 最新价格
+	OpenPrice   Float64 `json:"o"` // 开盘价格
+	HighPrice   Float64 `json:"h"` // 最高价格
+	LowPrice    Float64 `json:"l"` // 最低价格
+	BaseVolume  Float64 `json:"v"` // 成交量
+	QuoteVolume Float64 `json:"q"` // 成交额
+}
+
+// WsAllMiniTickerEvent define array of websocket market mini-ticker statistics events
+type WsAllMiniTickerEvent []*WsMiniTickerEvent
+
+func (s WsSpotPublicService) SubscribeAllMiniTicker(handler func(event WsAllMiniTickerEvent)) {
+	s.Subscribe("!miniTicker@arr", func(data []byte) {
+		var event WsAllMiniTickerEvent
+		err := json.Unmarshal(data, &event)
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("unmarshal message: %v", err))
+			return
+		}
+		handler(event)
+	})
+}
+
+func (s WsSpotPublicService) SubscribeSymbolsMiniTicker(handler func(event WsMiniTickerEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@miniTicker", strings.ToLower(symbol)), fn)
+	}
+}
+
+// WsTickerEvent define websocket market statistics event
+type WsTickerEvent struct {
+	Event              string `json:"e"` // 事件类型
+	Time               int64  `json:"E"` // 事件时间
+	Symbol             string `json:"s"` // 交易对
+	PriceChange        string `json:"p"` // 24小时价格变化
+	PriceChangePercent string `json:"P"` // 24小时价格变化（百分比）
+	WeightedAvgPrice   string `json:"w"` // 平均价格
+	PrevClosePrice     string `json:"x"` // 整整24小时之前，向前数的最后一次成交价格
+	LastPrice          string `json:"c"` // 最新成交价格
+	CloseQty           string `json:"Q"` // 最新成交交易的成交量
+	BidPrice           string `json:"b"` // 目前最高买单价
+	BidQty             string `json:"B"` // 目前最高买单价的挂单量
+	AskPrice           string `json:"a"` // 目前最低卖单价
+	AskQty             string `json:"A"` // 目前最低卖单价的挂单量
+	OpenPrice          string `json:"o"` // 开盘价
+	HighPrice          string `json:"h"` // 24小时内最高成交价
+	LowPrice           string `json:"l"` // 24小时内最低成交价
+	BaseVolume         string `json:"v"` // 24小时内成交量
+	QuoteVolume        string `json:"q"` // 24小时内成交额
+	OpenTime           int64  `json:"O"` // 统计开始时间
+	CloseTime          int64  `json:"C"` // 统计结束时间
+	FirstID            int64  `json:"F"` // 24小时内第一笔成交交易ID
+	LastID             int64  `json:"L"` // 24小时内最后一笔成交交易ID
+	Count              int64  `json:"n"` // 24小时内成交数
+}
+
+// WsAllTickerEvent define array of websocket market statistics events
+type WsAllTickerEvent []*WsTickerEvent
+
+func (s WsSpotPublicService) SubscribeAllTicker(handler func(event WsAllTickerEvent)) {
+	s.Subscribe("!ticker@arr", wsHandleWrapper(s.logger, handler))
+}
+
+func (s WsSpotPublicService) SubscribeSymbolsTicker(handler func(event WsTickerEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@ticker", strings.ToLower(symbol)), fn)
+	}
+}
+
+type WsBookTickerEvent struct {
+	UpdateID     int64  `json:"u"` // 更新ID
+	Symbol       string `json:"s"` // 交易对
+	BestBidPrice string `json:"b"` // 最高买价
+	BestBidQty   string `json:"B"` // 最高买价挂单量
+	BestAskPrice string `json:"a"` // 最低卖价
+	BestAskQty   string `json:"A"` // 最低卖价挂单量
+}
+
+func (s WsSpotPublicService) SubscribeSymbolsBookTicker(handler func(event WsBookTickerEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@bookTicker", strings.ToLower(symbol)), fn)
+	}
+}
+
+type WsSwapPublicService struct {
+	*WsPublicBaseService
+}
+
+func NewWsSwapPublicService(baseUrl string) WsSwapPublicService {
+	if baseUrl == "" {
+		baseUrl = BaseWsSwapCombinedMainURL
+	}
+	s := &WsPublicBaseService{
+		name:         "swap_public",
+		baseUrl:      baseUrl,
+		logger:       slog.Default(),
+		channels:     make(map[string]ws.WsHandler),
+		KeepInterval: 60 * time.Second,
+		PongTimeout:  10 * time.Second,
+	}
+	return WsSwapPublicService{s}
+}
+
+type MarkPriceEvent struct {
+	Event           string  `json:"e"` // 事件类型
+	Time            int64   `json:"E"` // 事件时间
+	Symbol          string  `json:"s"` // 交易对
+	MarkPrice       string  `json:"p"` // 标记价格
+	IndexPrice      string  `json:"i"` // 现货指数价格
+	EstimatedSettle string  `json:"P"` // 预估结算价格
+	FundingRate     Float64 `json:"r"` // 资金费率
+	NextFundingTime int64   `json:"T"` // 下一个资金费率时间
+}
+
+// SubscribeMarkPrice 订阅标记价格
+func (s WsSwapPublicService) SubscribeMarkPrice(handler func(event MarkPriceEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@markPrice", strings.ToLower(symbol)), fn)
+	}
+}
+
+type WsAllMarkPriceEvent []*MarkPriceEvent
+
+// SubscribeAllMarkPrice 订阅全市场标记价格
+func (s WsSwapPublicService) SubscribeAllMarkPrice(handler func(event WsAllMarkPriceEvent)) {
+	s.Subscribe("!markPrice@arr", wsHandleWrapper(s.logger, handler))
+}
+
+// SubscribeSymbolsMiniTicker 订阅指定交易对的简易信息
+func (s WsSwapPublicService) SubscribeSymbolsMiniTicker(handler func(event WsMiniTickerEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@miniTicker", strings.ToLower(symbol)), fn)
+	}
+}
+
+// SubscribeAllMiniTicker 订阅全市场简易信息
+func (s WsSwapPublicService) SubscribeAllMiniTicker(handler func(event WsAllMiniTickerEvent)) {
+	s.Subscribe("!miniTicker@arr", wsHandleWrapper(s.logger, handler))
+}
+
+func (s WsSwapPublicService) SubscribeSymbolsTicker(handler func(event WsTickerEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@ticker", strings.ToLower(symbol)), fn)
+	}
+}
+
+// SubscribeAllTicker 订阅全市场信息
+func (s WsSwapPublicService) SubscribeAllTicker(handler func(event WsAllTickerEvent)) {
+	s.Subscribe("!ticker@arr", wsHandleWrapper(s.logger, handler))
+}

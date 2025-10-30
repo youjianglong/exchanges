@@ -1,0 +1,202 @@
+package binance
+
+import (
+	"bytes"
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"time"
+
+	. "github.com/youjianglong/exchanges/common"
+)
+
+func currentTimestamp() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+// NewClient initialize an API client instance with API key and secret key.
+// You should always call this function before using this SDK.
+// Services will be created by the form client.NewXXXService().
+func NewClient(apiKey, secretKey string) *Client {
+	return NewClientWithHttpClient(apiKey, secretKey, NewHttpClient(16*time.Second, nil))
+}
+
+func NewClientWithHttpClient(apiKey, secretKey string, httpClient *http.Client) *Client {
+	return &Client{
+		APIKey:      apiKey,
+		SecretKey:   secretKey,
+		ApiBaseURL:  BaseApiURL,
+		PApiBaseURL: BasePApiURL,
+		FApiBaseURL: BaseFApiURL,
+		HTTPClient:  httpClient,
+		Logger:      slog.With("E", "binance"),
+	}
+}
+
+type doFunc func(req *http.Request) (*http.Response, error)
+
+// Client define API client
+type Client struct {
+	APIKey      string
+	SecretKey   string
+	PApiBaseURL string
+	ApiBaseURL  string
+	FApiBaseURL string
+	HTTPClient  *http.Client
+	Debug       bool
+	Logger      *slog.Logger
+	TimeOffset  int64
+	do          doFunc
+}
+
+func (c *Client) WithHttpClient(httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = NewHttpClient(16*time.Second, nil)
+	}
+	nc := *c
+	nc.HTTPClient = httpClient
+	return &nc
+}
+
+func (c *Client) SetProxyURL(proxyURL *url.URL) {
+	transport, ok := c.HTTPClient.Transport.(*http.Transport)
+	if !ok {
+		transport = CloneHttpTransport()
+		c.HTTPClient.Transport = transport
+	}
+	if proxyURL == nil {
+		transport.Proxy = nil
+	} else {
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+}
+
+func (c *Client) debug(format string, v ...interface{}) {
+	if c.Debug {
+		c.Logger.Debug(fmt.Sprintf(format, v...))
+	}
+}
+
+func (c *Client) parseRequest(r *request, opts ...RequestOption) (err error) {
+	// set request options from user
+	for _, opt := range opts {
+		opt(r)
+	}
+	err = r.validate()
+	if err != nil {
+		return err
+	}
+
+	var baseURL string
+	if r.baseURL != nil {
+		baseURL = *r.baseURL
+	} else {
+		baseURL = c.PApiBaseURL
+	}
+
+	fullURL := fmt.Sprintf("%s%s", baseURL, r.endpoint)
+	if r.recvWindow > 0 {
+		r.setParam(recvWindowKey, r.recvWindow)
+	}
+	if r.secType == secTypeSigned {
+		r.setParam(timestampKey, currentTimestamp()-c.TimeOffset)
+	}
+	queryString := r.query.Encode()
+	body := &bytes.Buffer{}
+	bodyString := r.form.Encode()
+	header := http.Header{}
+	if r.header != nil {
+		header = r.header.Clone()
+	}
+	if bodyString != "" {
+		header.Set("Content-Type", "application/x-www-form-urlencoded")
+		body = bytes.NewBufferString(bodyString)
+	}
+	if r.secType == secTypeAPIKey || r.secType == secTypeSigned {
+		header.Set("X-MBX-APIKEY", c.APIKey)
+	}
+
+	if r.secType == secTypeSigned {
+		raw := fmt.Sprintf("%s%s", queryString, bodyString)
+		mac := hmac.New(sha256.New, []byte(c.SecretKey))
+		_, err = mac.Write([]byte(raw))
+		if err != nil {
+			return err
+		}
+		v := url.Values{}
+		v.Set(signatureKey, fmt.Sprintf("%x", (mac.Sum(nil))))
+		if queryString == "" {
+			queryString = v.Encode()
+		} else {
+			queryString = fmt.Sprintf("%s&%s", queryString, v.Encode())
+		}
+	}
+	if queryString != "" {
+		fullURL = fmt.Sprintf("%s?%s", fullURL, queryString)
+	}
+	c.debug("full url: %s, body: %s", fullURL, bodyString)
+
+	r.fullURL = fullURL
+	r.header = header
+	r.body = body
+	return nil
+}
+
+func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption) (data []byte, err error) {
+	err = c.parseRequest(r, opts...)
+	if err != nil {
+		return []byte{}, err
+	}
+	req, err := http.NewRequest(r.method, r.fullURL, r.body)
+	if err != nil {
+		return []byte{}, err
+	}
+	req = req.WithContext(ctx)
+	req.Header = r.header
+	c.debug("request: %#v", req)
+	f := c.do
+	if f == nil {
+		f = c.HTTPClient.Do
+	}
+	res, err := f(req)
+	if err != nil {
+		return []byte{}, err
+	}
+	data, err = io.ReadAll(res.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer func() {
+		cerr := res.Body.Close()
+		// Only overwrite the retured error if the original error was nil and an
+		// error occurred while closing the body.
+		if err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
+	c.debug("response: %#v", res)
+	c.debug("response body: %s", string(data))
+	c.debug("response status code: %d", res.StatusCode)
+
+	if res.StatusCode >= http.StatusBadRequest {
+		apiErr := new(APIError)
+		e := json.Unmarshal(data, apiErr)
+		if e != nil {
+			c.debug("failed to unmarshal json: %s", e)
+		}
+		return nil, apiErr
+	}
+	return data, nil
+}
+
+func (c *Client) callAPIWithTimeout(timeout time.Duration, r *request, opts ...RequestOption) (data []byte, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return c.callAPI(ctx, r, opts...)
+}
