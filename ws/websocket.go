@@ -29,25 +29,15 @@ type Conn = websocket.Conn
 var (
 	MessageText   = websocket.MessageText
 	MessageBinary = websocket.MessageBinary
+	MessagePing   = websocket.MessageBinary + 1
+	MessagePong   = websocket.MessageBinary + 2
 )
 
 // ErrServiceStopped 服务停止
 var ErrServiceStopped = errors.New("service stopped")
 
-var (
-	WebsocketLogDir string
-	EOL             = []byte("\n")
-	InFlag          = []byte("I: ")
-	OutFlag         = []byte("O: ")
-	MsgTypeMap      = map[int][]byte{
-		int(websocket.MessageText):   []byte("[T] "),
-		int(websocket.MessageBinary): []byte("[B] "),
-	}
-)
-
 type Websocket struct {
 	HandshakeTimeout time.Duration
-	ReadLimit        int64
 	AutoReconnect    bool
 
 	logIn  func(int, []byte) // 输入日志
@@ -79,7 +69,6 @@ func NewWebsocket(endpoint string, handler WsHandler, errHandler ErrHandler, kee
 	waitC.Store(make(chan struct{}))
 	w := &Websocket{
 		HandshakeTimeout: 45 * time.Second,
-		ReadLimit:        655350,
 		AutoReconnect:    true,
 		endpoint:         endpoint,
 		httpClient:       &http.Client{Timeout: 10 * time.Second},
@@ -167,22 +156,22 @@ func (w *Websocket) serve() (err error) {
 			case <-w.stopC:
 				return
 			default:
-				if w.errHandler != nil {
-					w.errHandler(err)
-				} else {
-					slog.Error(fmt.Sprintf("prev connect failed: %v", err))
-				}
-				w.failCount++
-				time.Sleep(time.Second * 2 * w.failCount)
-				return w.serve()
 			}
+			if w.errHandler != nil {
+				w.errHandler(err)
+			} else {
+				slog.Error(fmt.Sprintf("prev connect failed: %v", err))
+			}
+			w.failCount++
+			time.Sleep(time.Second * 2 * w.failCount)
+			return w.serve()
 		}
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), w.HandshakeTimeout)
 	opts := websocket.DialOptions{
 		HTTPClient:      w.httpClient,
-		CompressionMode: websocket.CompressionContextTakeover,
+		CompressionMode: websocket.CompressionNoContextTakeover,
 		OnPingReceived:  w.handlePing,
 		OnPongReceived:  w.handlePong,
 	}
@@ -202,8 +191,9 @@ func (w *Websocket) serve() (err error) {
 		}
 		return err
 	}
-	c.SetReadLimit(w.ReadLimit)
+
 	w.conn = c
+	w.failCount = 0
 
 	// 关闭waitC
 	ch, _ := w.waitC.Swap(types.ClosedChan).(chan types.Zero)

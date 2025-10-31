@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -24,17 +25,29 @@ type WsPublicBaseService struct {
 	baseUrl      string
 	httpClient   *http.Client
 	logger       *slog.Logger
+	logIn        func(int, []byte)
+	logOut       func(int, []byte)
 	KeepInterval time.Duration
 	PongTimeout  time.Duration
 	channels     map[string]ws.WsHandler
 	channelMu    sync.RWMutex
 	ws           *ws.Websocket
+	idx          int64
 }
 
 func (s *WsPublicBaseService) SetHttpClient(httpClient *http.Client) *WsPublicBaseService {
 	s.httpClient = httpClient
 	if s.ws != nil {
 		s.ws.SetHttpClient(httpClient)
+	}
+	return s
+}
+
+func (s *WsPublicBaseService) SetLogger(logIn func(int, []byte), logOut func(int, []byte)) *WsPublicBaseService {
+	s.logIn = logIn
+	s.logOut = logOut
+	if s.ws != nil {
+		s.ws.SetLogger(s.logIn, s.logOut)
 	}
 	return s
 }
@@ -59,11 +72,15 @@ func (s *WsPublicBaseService) Unsubscribe(channel string) *WsPublicBaseService {
 	return s
 }
 
+func (s *WsPublicBaseService) IncrIdx() int64 {
+	return atomic.AddInt64(&s.idx, 1)
+}
+
 func (s *WsPublicBaseService) subscribe(channels ...string) {
 	data := map[string]any{
 		"method": "SUBSCRIBE",
 		"params": channels,
-		"id":     time.Now().UnixNano(),
+		"id":     s.IncrIdx(),
 	}
 	err := s.ws.WriteJSON(data)
 	if err != nil {
@@ -76,7 +93,7 @@ func (s *WsPublicBaseService) unsubscribe(channels ...string) {
 	data := map[string]any{
 		"method": "UNSUBSCRIBE",
 		"params": channels,
-		"id":     time.Now().UnixNano(),
+		"id":     s.IncrIdx(),
 	}
 	err := s.ws.WriteJSON(data)
 	if err != nil {
@@ -91,8 +108,9 @@ func (s *WsPublicBaseService) Start() error {
 		s.ws = nil
 	}
 	s.ws = ws.NewWebsocket(s.baseUrl, s.handleMsg, s.handleError, s.keepAlive).
-		SetPrevConnect(s.prevConnect).SetHttpClient(s.httpClient)
-	// TODO 设置logger
+		SetPrevConnect(s.prevConnect).
+		SetHttpClient(s.httpClient).
+		SetLogger(s.logIn, s.logOut)
 	return s.ws.Start()
 }
 
@@ -136,9 +154,9 @@ func (s *WsPublicBaseService) handleMsg(msg []byte) {
 		h(event.Data)
 		return
 	}
-	if event.Id != 0 {
-		s.logger.Info(fmt.Sprintf("id: %d, result: %s", event.Id, string(event.Result)))
-	}
+	// if event.Id != 0 {
+	// 	s.logger.Info(fmt.Sprintf("id: %d, result: %s", event.Id, string(event.Result)))
+	// }
 }
 
 func (s *WsPublicBaseService) handleError(err error) {
@@ -146,28 +164,15 @@ func (s *WsPublicBaseService) handleError(err error) {
 	s.logger.Error(fmt.Sprintf("%v at %s:%d", err, fr.File, fr.Line))
 }
 
-func (s *WsPublicBaseService) keepAlive(ws *ws.Websocket) {
-	ticker := time.NewTicker(s.KeepInterval)
-	timeout := s.KeepInterval * 3
-
-	lastResponse := time.Now()
-
-	ws.SetOnPingReceived(func(ctx context.Context, message []byte) bool {
-		lastResponse = time.Now()
+func (s *WsPublicBaseService) keepAlive(w *ws.Websocket) {
+	w.SetOnPingReceived(func(ctx context.Context, message []byte) bool {
+		s.logIn(int(ws.MessagePing), message)
 		return true
 	})
 
-	go func() {
-		defer ticker.Stop()
-		for {
-			<-ticker.C
-			if time.Since(lastResponse) > timeout {
-				s.logger.Debug("keep alive timeout")
-				ws.Restart()
-				return
-			}
-		}
-	}()
+	w.SetOnPongReceived(func(ctx context.Context, message []byte) {
+		s.logIn(int(ws.MessagePong), message)
+	})
 }
 
 func (s *WsPublicBaseService) Stop() {
@@ -341,6 +346,14 @@ func (s WsSwapPublicService) SubscribeMarkPrice(handler func(event MarkPriceEven
 	fn := wsHandleWrapper(s.logger, handler)
 	for _, symbol := range symbols {
 		s.Subscribe(fmt.Sprintf("%s@markPrice", strings.ToLower(symbol)), fn)
+	}
+}
+
+// SubscribeMarkPrice1s 订阅标记价格
+func (s WsSwapPublicService) SubscribeMarkPrice1s(handler func(event MarkPriceEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@markPrice@1s", strings.ToLower(symbol)), fn)
 	}
 }
 
