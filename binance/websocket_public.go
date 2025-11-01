@@ -317,7 +317,7 @@ type WsSwapPublicService struct {
 
 func NewWsSwapPublicService(baseUrl string) WsSwapPublicService {
 	if baseUrl == "" {
-		baseUrl = BaseWsSwapCombinedMainURL
+		baseUrl = BaseSwapCombinedWsMainURL
 	}
 	s := &WsPublicBaseService{
 		name:         "swap_public",

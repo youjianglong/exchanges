@@ -31,11 +31,23 @@ func NewClientWithHttpClient(apiKey, secretKey string, httpClient *http.Client) 
 	return &Client{
 		APIKey:      apiKey,
 		SecretKey:   secretKey,
-		ApiBaseURL:  BaseApiURL,
+		ApiBaseURL:  BaseSpotApiMainURL,
 		PApiBaseURL: BasePApiURL,
-		FApiBaseURL: BaseFApiURL,
+		FApiBaseURL: BaseFApiMainURL,
 		HTTPClient:  httpClient,
 		Logger:      slog.With("E", "binance"),
+	}
+}
+
+func NewTestClient(apiKey, secretKey string) *Client {
+	return &Client{
+		APIKey:      apiKey,
+		SecretKey:   secretKey,
+		ApiBaseURL:  BaseSpotApiTestURL,
+		PApiBaseURL: BasePApiURL,
+		FApiBaseURL: BaseFApiTestURL,
+		HTTPClient:  http.DefaultClient,
+		Logger:      slog.With("E", "binance-test"),
 	}
 }
 
@@ -57,7 +69,7 @@ type Client struct {
 
 func (c *Client) WithHttpClient(httpClient *http.Client) *Client {
 	if httpClient == nil {
-		httpClient = NewHttpClient(16*time.Second, nil)
+		httpClient = http.DefaultClient
 	}
 	nc := *c
 	nc.HTTPClient = httpClient

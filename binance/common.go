@@ -32,26 +32,30 @@ const (
 
 var (
 	// Endpoints
-	BaseApiURL                 = "https://api.binance.com"
-	BasePApiURL                = "https://papi.binance.com"
-	BaseFApiURL                = "https://fapi.binance.com"
-	BaseWsSpotMainURL          = "wss://stream.binance.com:9443/ws/"
-	BaseWsTestnetURL           = "wss://testnet.binance.vision/ws/"
-	BaseSpotCombinedMainURL    = "wss://stream.binance.com:9443/stream?streams="
-	BaseSpotCombinedTestnetURL = "wss://testnet.binance.vision/stream?streams="
-	BaseWsApiMainURL           = "wss://ws-api.binance.com:443/ws-api/v3"
-	BaseWsApiTestnetURL        = "wss://testnet.binance.vision/ws-api/v3"
+	BaseSpotApiMainURL      = "https://api.binance.com"                       // 现货API主网
+	BaseSpotApiTestURL      = "https://testnet.binance.vision"                // 现货API测试网
+	BaseSpotWsApiMainURL    = "wss://ws-api.binance.com:443/ws-api/v3"        // 现货WebSocket API主网
+	BaseSpotWsApiTestURL    = "wss://ws-api.testnet.binance.vision/ws-api/v3" // 现货WebSocket API测试网
+	BaseSpotWsMainURL       = "wss://stream.binance.com:9443/ws/"             // 现货主网行情推送WebSocket
+	BaseSpotWsTestURL       = "wss://stream.testnet.binance.vision/ws/"       // 现货测试网行情推送WebSocket
+	BaseSpotCombinedMainURL = "wss://stream.binance.com:9443/stream?streams=" // 现货主网行情推送WebSocket合并
+	BaseSpotCombinedTestURL = "wss://testnet.binance.vision/stream?streams="  // 现货测试网行情推送WebSocket合并
 
-	BaseWsSwapMainURL            = "wss://fstream.binance.com/ws/"
-	BaseWsSwapTestnetURL         = "wss://testnet.binance.vision/ws/"
-	BaseWsSwapCombinedMainURL    = "wss://fstream.binance.com/stream?streams="
-	BaseWsSwapCombinedTestnetURL = "wss://testnet.binance.vision/stream?streams="
-
-	ListenKeyLifetime = time.Hour // listenkey默认有效期1小时
+	BaseFApiMainURL           = "https://fapi.binance.com"                     // U本位合约主网
+	BaseFApiTestURL           = "https://demo-fapi.binance.com"                // U本位合约测试网
+	BaseSwapWsMainURL         = "wss://fstream.binance.com/ws/"                // U本位合约WebSocket API
+	BaseSwapWsTestURL         = "wss://testnet.binance.vision/ws/"             // U本位合约测试网WebSocket API
+	BaseSwapCombinedWsMainURL = "wss://fstream.binance.com/stream?streams="    // U本位合约主网行情推送WebSocket合并
+	BaseSwapCombinedWsTestURL = "wss://testnet.binance.vision/stream?streams=" // U本位合约测试网行情推送WebSocket合并
 
 	// https://developers.binance.com/docs/zh-CN/derivatives/portfolio-margin/user-data-streams
-	PortfolioMarginUserWsURL = "wss://fstream.binance.com/pm/ws/"
+	BasePApiURL              = "https://papi.binance.com"         // 统一账户API主网
+	PortfolioMarginUserWsURL = "wss://fstream.binance.com/pm/ws/" // 统一账户WebSocket API
 
+	FutureApiTestURL   = "https://testnet.binancefuture.com" // 币本位合约测试网
+	FutureWsApiTestURL = "wss://dstream.binancefuture.com"   // 币本位合约测试网WebSocket API
+
+	ListenKeyLifetime = time.Hour // listenkey默认有效期1小时
 	// WebsocketPingInterval is interval for sending ping/pong messages if WebsocketKeepalive is enabled
 	WebsocketPingInterval = time.Second * 60
 	// WebsocketPingPongTimeout is timeout for sending a ping/pong message
