@@ -319,3 +319,39 @@ func (s *PApiUmChangeLeverageService) Do(ctx context.Context, opts ...RequestOpt
 	}
 	return nil
 }
+
+type PApiGetUMPositionsService struct {
+	uaSvc *GetUMAccountDetailService
+}
+
+func (c *Client) NewPApiGetUMPositionsService() *PApiGetUMPositionsService {
+	return &PApiGetUMPositionsService{uaSvc: c.NewGetUMAccountDetailService()}
+}
+
+func (s *PApiGetUMPositionsService) Do(ctx context.Context, opts ...RequestOption) ([]*Position, error) {
+	detail, err := s.uaSvc.Do(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	var positions []*Position
+	for _, p := range detail.Positions {
+		if p.PositionAmt.Value() == 0 {
+			continue
+		}
+		positions = append(positions, &Position{
+			Symbol:           p.Symbol,
+			PositionSide:     p.PositionSide,
+			PositionAmt:      p.PositionAmt,
+			EntryPrice:       p.EntryPrice,
+			Leverage:         p.Leverage,
+			UnRealizedProfit: p.UnrealizedProfit,
+			InitialMargin:    p.InitialMargin,
+			MaintMargin:      p.MaintMargin,
+			MarkPrice:        p.MarkPrice,
+			Notional:         p.Notional,
+			LiquidationPrice: p.LiquidationPrice,
+			UpdateTime:       p.UpdateTime,
+		})
+	}
+	return positions, nil
+}

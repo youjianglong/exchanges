@@ -49,7 +49,7 @@ func TestPApiGetAccountBalance(t *testing.T) {
 
 func TestFApiGetAccountBalance(t *testing.T) {
 	client := newTestClient()
-	balances, err := client.NewGetFApiAccountBalanceService().Do(context.Background())
+	balances, err := client.NewFApiGetAccountBalanceService().Do(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,23 +58,9 @@ func TestFApiGetAccountBalance(t *testing.T) {
 	}
 }
 
-func TestGetPApiPositions(t *testing.T) {
-	client := newTestClient()
-	positions, err := client.NewGetPApiPositionsService().Do(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, position := range positions {
-		if position.PositionAmt.Value() == 0 {
-			continue
-		}
-		t.Logf("%+v", position)
-	}
-}
-
 func TestGetFApiPositions(t *testing.T) {
 	client := newTestClient()
-	positions, err := client.NewGetFApiPositionsService().Do(context.Background())
+	positions, err := client.NewFApiGetPositionsService().Do(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

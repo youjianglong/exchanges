@@ -351,11 +351,6 @@ func (c *Client) NewPApiUmGetUserTradesService(symbol string) *PApiUmGetUserTrad
 	return &PApiUmGetUserTradesService{c: c, symbol: symbol}
 }
 
-func (s *PApiUmGetUserTradesService) Symbol(symbol string) *PApiUmGetUserTradesService {
-	s.symbol = symbol
-	return s
-}
-
 func (s *PApiUmGetUserTradesService) StartTime(startTime int64) *PApiUmGetUserTradesService {
 	s.startTime = &startTime
 	return s
@@ -380,7 +375,7 @@ func (s *PApiUmGetUserTradesService) Limit(limit int) *PApiUmGetUserTradesServic
 	return s
 }
 
-func (s *PApiUmGetUserTradesService) Do(ctx context.Context, opts ...RequestOption) ([]TradeRecord, error) {
+func (s *PApiUmGetUserTradesService) Do(ctx context.Context, opts ...RequestOption) ([]*TradeRecord, error) {
 	r := &request{
 		method:   http.MethodGet,
 		endpoint: "/papi/v1/um/userTrades",
@@ -404,7 +399,7 @@ func (s *PApiUmGetUserTradesService) Do(ctx context.Context, opts ...RequestOpti
 	if err != nil {
 		return nil, err
 	}
-	var trades []TradeRecord
+	var trades []*TradeRecord
 	err = json.Unmarshal(resp, &trades)
 	if err != nil {
 		return nil, err

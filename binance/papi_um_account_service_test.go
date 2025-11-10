@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+func TestPApiGetPositions(t *testing.T) {
+	client := newTestClient()
+	positions, err := client.NewPApiGetUMPositionsService().Do(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, position := range positions {
+		if position.PositionAmt.Value() == 0 {
+			continue
+		}
+		t.Logf("%+v", position)
+	}
+}
+
 func TestPapiUMGetPositionRiskService(t *testing.T) {
 	client := newTestClient()
 	positions, err := client.NewPapiUMGetPositionRiskService().Symbol(*symbol).Do(context.Background())

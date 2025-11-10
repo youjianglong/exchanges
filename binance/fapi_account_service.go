@@ -8,12 +8,12 @@ import (
 	. "github.com/youjianglong/exchanges/common"
 )
 
-type GetFApiAccountBalanceService struct {
+type FApiGetAccountBalanceService struct {
 	c *Client
 }
 
-func (c *Client) NewGetFApiAccountBalanceService() *GetFApiAccountBalanceService {
-	return &GetFApiAccountBalanceService{c: c}
+func (c *Client) NewFApiGetAccountBalanceService() *FApiGetAccountBalanceService {
+	return &FApiGetAccountBalanceService{c: c}
 }
 
 type FApiAccountBalance struct {
@@ -28,7 +28,7 @@ type FApiAccountBalance struct {
 	UpdateTime         int64   `json:"updateTime"`         // 更新时间
 }
 
-func (s *GetFApiAccountBalanceService) Do(ctx context.Context, opts ...RequestOption) ([]*FApiAccountBalance, error) {
+func (s *FApiGetAccountBalanceService) Do(ctx context.Context, opts ...RequestOption) ([]*FApiAccountBalance, error) {
 	r := &request{
 		method:   http.MethodGet,
 		endpoint: "/fapi/v3/balance",
@@ -66,51 +66,15 @@ type PositionsGetter interface {
 	Do(ctx context.Context, opts ...RequestOption) ([]*Position, error)
 }
 
-type GetPApiPositionsService struct {
-	uaSvc *GetUMAccountDetailService
-}
-
-func (c *Client) NewGetPApiPositionsService() *GetPApiPositionsService {
-	return &GetPApiPositionsService{uaSvc: c.NewGetUMAccountDetailService()}
-}
-
-func (s *GetPApiPositionsService) Do(ctx context.Context, opts ...RequestOption) ([]*Position, error) {
-	detail, err := s.uaSvc.Do(ctx, opts...)
-	if err != nil {
-		return nil, err
-	}
-	var positions []*Position
-	for _, p := range detail.Positions {
-		if p.PositionAmt.Value() == 0 {
-			continue
-		}
-		positions = append(positions, &Position{
-			Symbol:           p.Symbol,
-			PositionSide:     p.PositionSide,
-			PositionAmt:      p.PositionAmt,
-			EntryPrice:       p.EntryPrice,
-			Leverage:         p.Leverage,
-			UnRealizedProfit: p.UnrealizedProfit,
-			InitialMargin:    p.InitialMargin,
-			MaintMargin:      p.MaintMargin,
-			MarkPrice:        p.MarkPrice,
-			Notional:         p.Notional,
-			LiquidationPrice: p.LiquidationPrice,
-			UpdateTime:       p.UpdateTime,
-		})
-	}
-	return positions, nil
-}
-
-type GetFApiPositionsService struct {
+type FApiGetPositionsService struct {
 	c *Client
 }
 
-func (c *Client) NewGetFApiPositionsService() *GetFApiPositionsService {
-	return &GetFApiPositionsService{c: c}
+func (c *Client) NewFApiGetPositionsService() *FApiGetPositionsService {
+	return &FApiGetPositionsService{c: c}
 }
 
-func (s *GetFApiPositionsService) Do(ctx context.Context, opts ...RequestOption) ([]*Position, error) {
+func (s *FApiGetPositionsService) Do(ctx context.Context, opts ...RequestOption) ([]*Position, error) {
 	r := &request{
 		method:   http.MethodGet,
 		endpoint: "/fapi/v3/positionRisk",
@@ -127,4 +91,85 @@ func (s *GetFApiPositionsService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	return risks, nil
+}
+
+type FApiGetIncomeService struct {
+	c *Client
+
+	symbol     *string
+	incomeType *string
+	startTime  *int64
+	endTime    *int64
+	page       *int
+	limit      *int
+}
+
+func (c *Client) NewFApiGetIncomeService() *FApiGetIncomeService {
+	return &FApiGetIncomeService{c: c}
+}
+
+func (s *FApiGetIncomeService) Symbol(symbol string) *FApiGetIncomeService {
+	s.symbol = &symbol
+	return s
+}
+
+func (s *FApiGetIncomeService) IncomeType(incomeType string) *FApiGetIncomeService {
+	s.incomeType = &incomeType
+	return s
+}
+
+func (s *FApiGetIncomeService) StartTime(startTime int64) *FApiGetIncomeService {
+	s.startTime = &startTime
+	return s
+}
+
+func (s *FApiGetIncomeService) EndTime(endTime int64) *FApiGetIncomeService {
+	s.endTime = &endTime
+	return s
+}
+
+func (s *FApiGetIncomeService) Page(page int) *FApiGetIncomeService {
+	s.page = &page
+	return s
+}
+
+func (s *FApiGetIncomeService) Limit(limit int) *FApiGetIncomeService {
+	s.limit = &limit
+	return s
+}
+
+func (s *FApiGetIncomeService) Do(ctx context.Context, opts ...RequestOption) ([]Income, error) {
+	r := &request{
+		method:   http.MethodGet,
+		endpoint: "/fapi/v1/income",
+		secType:  secTypeSigned,
+	}
+	if s.symbol != nil {
+		r.setParam("symbol", *s.symbol)
+	}
+	if s.incomeType != nil {
+		r.setParam("incomeType", *s.incomeType)
+	}
+	if s.startTime != nil {
+		r.setParam("startTime", *s.startTime)
+	}
+	if s.endTime != nil {
+		r.setParam("endTime", *s.endTime)
+	}
+	if s.page != nil {
+		r.setParam("page", *s.page)
+	}
+	if s.limit != nil {
+		r.setParam("limit", *s.limit)
+	}
+
+	data, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+	var res []Income
+	if err := json.Unmarshal(data, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
