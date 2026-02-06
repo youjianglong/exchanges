@@ -43,3 +43,21 @@ func TestPApiUmGetIncomeService(t *testing.T) {
 		t.Logf("%+v", income)
 	}
 }
+
+func TestExportIncome(t *testing.T) {
+	client := newTestClient()
+	svc := client.NewPApiUmGetIncomeService().IncomeType(*incomeType).
+		StartTime(*startTime).
+		EndTime(*endTime).
+		Limit(*limit)
+	if *symbol != "" {
+		svc = svc.Symbol(*symbol)
+	}
+	incomes, err := svc.Do(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, income := range incomes {
+		t.Logf("%+v", income)
+	}
+}

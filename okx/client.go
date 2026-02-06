@@ -187,15 +187,23 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 	}
 
 	var common struct {
-		Code string          `json:"code"`
-		Msg  string          `json:"msg"`
-		Data json.RawMessage `json:"data"`
+		Code  string          `json:"code"`
+		Msg   string          `json:"msg"`
+		Data  json.RawMessage `json:"data"`
+		SCode string          `json:"sCode"`
+		SMsg  string          `json:"sMsg"`
 	}
 	if err := json.Unmarshal(data, &common); err != nil {
 		return nil, err
 	}
 	if common.Code != "0" {
-		return nil, fmt.Errorf("API error: %s", common.Msg)
+		var errMsg string
+		if common.SCode != "" {
+			errMsg = common.SCode + ": " + common.SMsg
+		} else {
+			errMsg = common.Msg
+		}
+		return nil, fmt.Errorf("API error: %s", errMsg)
 	}
 	// 返回 data 部分的原始 JSON 数据
 	return common.Data, nil

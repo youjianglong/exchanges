@@ -187,14 +187,25 @@ func (s *GetSpotSymbolInfosService) Do(ctx context.Context, opts ...RequestOptio
 			if !bytes.Contains(f, lotSizeKey) {
 				continue
 			}
-			var lotSize LotSize
+			var lotSize LimitFilter
 			if err := json.Unmarshal(f, &lotSize); err != nil {
 				return nil, fmt.Errorf("unmarshal lotSize %s, %s: %w", s.Symbol, string(f), err)
 			}
-			if lotSize.FilterType == "LOT_SIZE" {
-				info.LotSize = lotSize
-			} else if lotSize.FilterType == "MARKET_LOT_SIZE" {
-				info.MarketLotSize = lotSize
+			switch lotSize.FilterType {
+			case "LOT_SIZE":
+				info.LotSize = LotLimit{
+					MinQty:   lotSize.MinQty,
+					MaxQty:   lotSize.MaxQty,
+					StepSize: lotSize.StepSize,
+				}
+			case "MARKET_LOT_SIZE":
+				info.MarketLotSize = LotLimit{
+					MinQty:   lotSize.MinQty,
+					MaxQty:   lotSize.MaxQty,
+					StepSize: lotSize.StepSize,
+				}
+			case "MIN_NOTIONAL":
+				info.MinValue = lotSize.Notional
 			}
 		}
 		symbols = append(symbols, info)

@@ -251,15 +251,16 @@ func (s *GetOrdersPendingService) Do(ctx context.Context, opts ...RequestOption)
 }
 
 type TradeOrderService struct {
-	c       *Client
-	instId  string  // 产品ID，如 BTC-USDT-SWAP
-	tdMode  string  // 交易模式
-	side    string  // 订单方向 buy: 买，sell: 卖
-	ordType string  // 订单类型，limit: 限价单，market: 市价单
-	sz      string  // 委托数量
-	px      *string // 委托价格
-	posSide *string // 持仓方向，long: 多头，short: 空头
-	clOrdId *string // 客户自定义订单ID
+	c          *Client
+	instId     string  // 产品ID，如 BTC-USDT-SWAP
+	tdMode     string  // 交易模式
+	side       string  // 订单方向 buy: 买，sell: 卖
+	ordType    string  // 订单类型，limit: 限价单，market: 市价单
+	sz         string  // 委托数量
+	px         *string // 委托价格
+	posSide    *string // 持仓方向，long: 多头，short: 空头
+	clOrdId    *string // 客户自定义订单ID
+	reduceOnly *bool   // 是否只减仓，true: 只减仓，false: 不减仓
 }
 
 func (c *Client) NewTradeOrderService(instId string, tdMode string, side string, ordType string, sz string) *TradeOrderService {
@@ -278,6 +279,11 @@ func (s *TradeOrderService) Px(px string) *TradeOrderService {
 
 func (s *TradeOrderService) ClOrdId(clOrdId string) *TradeOrderService {
 	s.clOrdId = &clOrdId
+	return s
+}
+
+func (s *TradeOrderService) ReduceOnly(reduceOnly bool) *TradeOrderService {
+	s.reduceOnly = &reduceOnly
 	return s
 }
 
@@ -309,6 +315,9 @@ func (s *TradeOrderService) Do(ctx context.Context, opts ...RequestOption) (*Ord
 	}
 	if s.clOrdId != nil {
 		r.setData("clOrdId", *s.clOrdId)
+	}
+	if s.reduceOnly != nil {
+		r.setData("reduceOnly", *s.reduceOnly)
 	}
 	resp, err := s.c.callAPI(ctx, r, opts...)
 	if err != nil {

@@ -89,7 +89,7 @@ func (c *Client) SetProxyURL(proxyURL *url.URL) {
 	}
 }
 
-func (c *Client) debug(format string, v ...interface{}) {
+func (c *Client) debug(format string, v ...any) {
 	if c.Debug {
 		c.Logger.Debug(fmt.Sprintf(format, v...))
 	}

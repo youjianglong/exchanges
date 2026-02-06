@@ -19,15 +19,15 @@ func (c *Client) NewGetAccountBalanceService() *GetAccountBalanceService {
 }
 
 type AccountBalance struct {
-	TotalEq            string                 `json:"totalEq"`            // 美金层面权益
-	AdjEq              string                 `json:"adjEq"`              // 美金层面调整后权益（可用余额）
-	Imr                string                 `json:"imr"`                // 美金层面全仓占用保证金
-	Mmr                string                 `json:"mmr"`                // 美金层面维持保证金
-	MgnRatio           string                 `json:"mgnRatio"`           // 美金层面保证金率
-	NotionalUsd        string                 `json:"notionalUsd"`        // 美金层面持仓名义价值
-	NotionalUsdForSwap string                 `json:"notionalUsdForSwap"` // 美金层面持仓名义价值（永续）
-	Upl                string                 `json:"upl"`                // 账户的未实现盈亏
-	UTime              string                 `json:"uTime"`              // 账户信息的更新时间
+	TotalEq            Float64                `json:"totalEq"`            // 美金层面权益
+	AdjEq              Float64                `json:"adjEq"`              // 美金层面调整后权益（可用余额）
+	Imr                Float64                `json:"imr"`                // 美金层面全仓占用保证金
+	Mmr                Float64                `json:"mmr"`                // 美金层面维持保证金
+	MgnRatio           Float64                `json:"mgnRatio"`           // 美金层面保证金率
+	NotionalUsd        Float64                `json:"notionalUsd"`        // 美金层面持仓名义价值
+	NotionalUsdForSwap Float64                `json:"notionalUsdForSwap"` // 美金层面持仓名义价值（永续）
+	Upl                Float64                `json:"upl"`                // 账户的未实现盈亏
+	UTime              Int64                  `json:"uTime"`              // 账户信息的更新时间
 	Details            []AccountBalanceDetail `json:"details"`            // 币种维度账户信息
 }
 
@@ -146,4 +146,58 @@ func (s *GetAssetBalancesService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	return res, nil
+}
+
+// SetAccountLeverageService 设置杠杆倍数
+// https://www.okx.com/docs-v5/zh/#trading-account-rest-api-set-leverage
+type SetAccountLeverageService struct {
+	c       *Client
+	instId  *string
+	ccy     *string
+	lever   string
+	mgnMode string
+	posSide *string
+}
+
+func (c *Client) NewSetAccountLeverageService(lever string, mgnMode string) *SetAccountLeverageService {
+	return &SetAccountLeverageService{c: c, lever: lever, mgnMode: mgnMode}
+}
+
+func (s *SetAccountLeverageService) InstId(instId string) *SetAccountLeverageService {
+	s.instId = &instId
+	return s
+}
+
+func (s *SetAccountLeverageService) Ccy(ccy string) *SetAccountLeverageService {
+	s.ccy = &ccy
+	return s
+}
+
+func (s *SetAccountLeverageService) PosSide(posSide string) *SetAccountLeverageService {
+	s.posSide = &posSide
+	return s
+}
+
+func (s *SetAccountLeverageService) Do(ctx context.Context, opts ...RequestOption) error {
+	r := &request{
+		method:   http.MethodPost,
+		endpoint: "/api/v5/account/set-leverage",
+		secType:  secTypeSigned,
+	}
+	if s.instId != nil {
+		r.setData("instId", *s.instId)
+	}
+	if s.ccy != nil {
+		r.setData("ccy", *s.ccy)
+	}
+	if s.posSide != nil {
+		r.setData("posSide", *s.posSide)
+	}
+	r.setData("lever", s.lever)
+	r.setData("mgnMode", s.mgnMode)
+	_, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return err
+	}
+	return nil
 }

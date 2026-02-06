@@ -64,22 +64,33 @@ var (
 	WebsocketKeepalive = true
 )
 
-var lotSizeKey = []byte("LOT_SIZE")
+var (
+	lotSizeKey  = []byte("LOT_SIZE")
+	minValueKey = []byte("MIN_NOTIONAL")
+)
 
-type LotSize struct {
+type LimitFilter struct {
 	FilterType string  `json:"filterType"`
 	MinQty     Float64 `json:"minQty"`
 	MaxQty     Float64 `json:"maxQty"`
 	StepSize   Float64 `json:"stepSize"`
+	Notional   Float64 `json:"notional"`
+}
+
+type LotLimit struct {
+	MinQty   Float64 `json:"minQty"`
+	MaxQty   Float64 `json:"maxQty"`
+	StepSize Float64 `json:"stepSize"`
 }
 
 type SymbolInfo struct {
-	Symbol              string  // 交易对
-	QuoteAsset          string  // 报价币种
-	PricePrecision      int     // 价格精度
-	QuantityPrecision   int     // 数量精度
-	BaseAssetPrecision  int     // 基础货币精度
-	QuoteAssetPrecision int     // 报价货币精度
-	LotSize             LotSize // 限价单下单量
-	MarketLotSize       LotSize // 市价单下单量
+	Symbol              string   // 交易对
+	QuoteAsset          string   // 报价币种
+	PricePrecision      int      // 价格精度
+	QuantityPrecision   int      // 数量精度
+	BaseAssetPrecision  int      // 基础货币精度
+	QuoteAssetPrecision int      // 报价货币精度
+	MinValue            Float64  // 最小下单价值
+	LotSize             LotLimit // 限价单下单量
+	MarketLotSize       LotLimit // 市价单下单量
 }

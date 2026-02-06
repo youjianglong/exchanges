@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -27,6 +28,8 @@ func quote(data string) string {
 	return string(b)
 }
 
+var ErrEmptyString = errors.New("empty string")
+
 type Float64 string
 
 func NewFloat64(f float64, decimals ...int) Float64 {
@@ -42,10 +45,16 @@ func (f Float64) String() string {
 }
 
 func (f Float64) Float64() (float64, error) {
+	if f == "" {
+		return 0, ErrEmptyString
+	}
 	return strconv.ParseFloat(string(f), 64)
 }
 
 func (f Float64) Value() float64 {
+	if f == "" {
+		return 0
+	}
 	v, _ := f.Float64()
 	return v
 }
@@ -67,6 +76,14 @@ func (f Float64) Ceil(precision int) Float64 {
 	}
 	v = math.Ceil(v*math.Pow10(precision)) / math.Pow10(precision) // 向上取整
 	return NewFloat64(v, precision)
+}
+
+func (f Float64) Add(other Float64) Float64 {
+	return NewFloat64(f.Value() + other.Value())
+}
+
+func (f Float64) Sub(other Float64) Float64 {
+	return NewFloat64(f.Value() - other.Value())
 }
 
 func (f Float64) IsZero() bool {
@@ -108,6 +125,9 @@ func (i Int64) Int64() (int64, error) {
 }
 
 func (i Int64) Value() int64 {
+	if i == "" {
+		return 0
+	}
 	v, _ := i.Int64()
 	return v
 }
@@ -165,4 +185,12 @@ func (i Mixed) Int64() Int64 {
 
 func (i Mixed) IsZero() bool {
 	return i == ""
+}
+
+// Abs 取绝对值
+func Abs[T Float64 | Int64 | Mixed](val T) T {
+	if len(val) > 0 && val[0] == '-' {
+		return val[1:]
+	}
+	return val
 }

@@ -5,10 +5,27 @@ import (
 	"strings"
 )
 
+const (
+	USDT = "USDT"
+	USDC = "USDC"
+	BTC  = "BTC"
+	ETH  = "ETH"
+	SOL  = "SOL"
+)
+
 type Symbol struct {
 	Symbol string `json:"symbol"`
 	Base   string `json:"base"`
 	Quote  string `json:"quote"`
+}
+
+func NewSymbolPair(base, quote string) *Symbol {
+	s := &Symbol{
+		Base:  strings.ToUpper(base),
+		Quote: strings.ToUpper(quote),
+	}
+	s.Symbol = s.Format()
+	return s
 }
 
 func NewSymbol(symbol string) *Symbol {
@@ -47,21 +64,21 @@ func (s *Symbol) parse() {
 		s.Base = base
 		s.Quote = quote
 	} else if s.Quote == "" {
-		if strings.HasSuffix(s.Symbol, "USDT") {
-			s.Quote = "USDT"
-			s.Base = strings.TrimSuffix(s.Symbol, "USDT")
-		} else if strings.HasSuffix(s.Symbol, "USDC") {
-			s.Quote = "USDC"
-			s.Base = strings.TrimSuffix(s.Symbol, "USDC")
-		} else if strings.HasSuffix(s.Symbol, "BTC") {
-			s.Quote = "BTC"
-			s.Base = strings.TrimSuffix(s.Symbol, "BTC")
-		} else if strings.HasSuffix(s.Symbol, "ETH") {
-			s.Quote = "ETH"
-			s.Base = strings.TrimSuffix(s.Symbol, "ETH")
-		} else if strings.HasSuffix(s.Symbol, "SOL") {
-			s.Quote = "SOL"
-			s.Base = strings.TrimSuffix(s.Symbol, "SOL")
+		if strings.HasSuffix(s.Symbol, USDT) {
+			s.Quote = USDT
+			s.Base = strings.TrimSuffix(s.Symbol, USDT)
+		} else if strings.HasSuffix(s.Symbol, USDC) {
+			s.Quote = USDC
+			s.Base = strings.TrimSuffix(s.Symbol, USDC)
+		} else if strings.HasSuffix(s.Symbol, BTC) {
+			s.Quote = BTC
+			s.Base = strings.TrimSuffix(s.Symbol, BTC)
+		} else if strings.HasSuffix(s.Symbol, ETH) {
+			s.Quote = ETH
+			s.Base = strings.TrimSuffix(s.Symbol, ETH)
+		} else if strings.HasSuffix(s.Symbol, SOL) {
+			s.Quote = SOL
+			s.Base = strings.TrimSuffix(s.Symbol, SOL)
 		} else {
 			return
 		}
