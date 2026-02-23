@@ -166,12 +166,16 @@ func (s *WsPublicBaseService) handleError(err error) {
 
 func (s *WsPublicBaseService) keepAlive(w *ws.Websocket) {
 	w.SetOnPingReceived(func(ctx context.Context, message []byte) bool {
-		s.logIn(int(ws.MessagePing), message)
+		if s.logIn != nil {
+			s.logIn(int(ws.MessagePing), message)
+		}
 		return true
 	})
 
 	w.SetOnPongReceived(func(ctx context.Context, message []byte) {
-		s.logIn(int(ws.MessagePong), message)
+		if s.logIn != nil {
+			s.logIn(int(ws.MessagePong), message)
+		}
 	})
 }
 
