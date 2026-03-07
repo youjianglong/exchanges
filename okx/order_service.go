@@ -81,10 +81,12 @@ type Order struct {
 	OrdType   string `json:"ordType"`   // 订单类型
 	Side      string `json:"side"`      // 交易方向
 	PosSide   string `json:"posSide"`   // 持仓方向
+	Sz        string `json:"sz"`        // 委托数量
 	AccFillSz string `json:"accFillSz"` // 累计成交数量
 	AvgPx     string `json:"avgPx"`     // 成交均价
 	State     string `json:"state"`     // 订单状态
 	Lever     string `json:"lever"`     // 杠杆倍数
+	Pnl       string `json:"pnl"`       // 盈亏
 	FeeCcy    string `json:"feeCcy"`    // 手续费币种
 	Fee       string `json:"fee"`       // 手续费
 	CTime     string `json:"cTime"`     // 创建时间
@@ -332,6 +334,56 @@ func (s *TradeOrderService) Do(ctx context.Context, opts ...RequestOption) (*Ord
 		return nil, errors.New("no order found")
 	}
 	return &results[0], nil
+}
+
+type GetOrderService struct {
+	c *Client
+
+	instId  string  // 产品ID
+	ordId   *string // 订单ID
+	clOrdId *string // 客户自定义订单ID
+}
+
+func (c *Client) NewGetOrderService(instId string) *GetOrderService {
+	return &GetOrderService{c: c, instId: instId}
+}
+
+func (s *GetOrderService) OrdId(ordId string) *GetOrderService {
+	s.ordId = &ordId
+	return s
+}
+
+func (s *GetOrderService) ClOrdId(clOrdId string) *GetOrderService {
+	s.clOrdId = &clOrdId
+	return s
+}
+
+func (s *GetOrderService) Do(ctx context.Context, opts ...RequestOption) (*Order, error) {
+	r := &request{
+		method:   http.MethodGet,
+		endpoint: "/api/v5/trade/order",
+		secType:  secTypeSigned,
+	}
+	r.setParam("instId", s.instId)
+	if s.ordId != nil {
+		r.setParam("ordId", *s.ordId)
+	}
+	if s.clOrdId != nil {
+		r.setParam("clOrdId", *s.clOrdId)
+	}
+	resp, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+	var orders []*Order
+	err = json.Unmarshal(resp, &orders)
+	if err != nil {
+		return nil, err
+	}
+	if len(orders) == 0 {
+		return nil, errors.New("no order found")
+	}
+	return orders[0], nil
 }
 
 type GetTradeFillService struct {
