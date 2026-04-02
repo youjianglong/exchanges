@@ -300,14 +300,16 @@ func (s WsSpotPublicService) SubscribeSymbolsTicker(handler func(event WsTickerE
 }
 
 type WsBookTickerEvent struct {
-	UpdateID     int64  `json:"u"` // 更新ID
-	Symbol       string `json:"s"` // 交易对
-	BestBidPrice string `json:"b"` // 最高买价
-	BestBidQty   string `json:"B"` // 最高买价挂单量
-	BestAskPrice string `json:"a"` // 最低卖价
-	BestAskQty   string `json:"A"` // 最低卖价挂单量
+	UpdateID int64   `json:"u"` // 更新ID
+	Symbol   string  `json:"s"` // 交易对
+	BidPrice Float64 `json:"b"` // 最高买价
+	BidQty   Float64 `json:"B"` // 最高买价挂单量
+	AskPrice Float64 `json:"a"` // 最低卖价
+	AskQty   Float64 `json:"A"` // 最低卖价挂单量
+	Time     int64   `json:"E"` // 事件时间
 }
 
+// SubscribeSymbolsBookTicker 订阅指定交易对的盘口信息
 func (s WsSpotPublicService) SubscribeSymbolsBookTicker(handler func(event WsBookTickerEvent), symbols ...string) {
 	fn := wsHandleWrapper(s.logger, handler)
 	for _, symbol := range symbols {
@@ -338,9 +340,9 @@ type MarkPriceEvent struct {
 	Event           string  `json:"e"` // 事件类型
 	Time            int64   `json:"E"` // 事件时间
 	Symbol          string  `json:"s"` // 交易对
-	MarkPrice       string  `json:"p"` // 标记价格
-	IndexPrice      string  `json:"i"` // 现货指数价格
-	EstimatedSettle string  `json:"P"` // 预估结算价格
+	MarkPrice       Float64 `json:"p"` // 标记价格
+	IndexPrice      Float64 `json:"i"` // 现货指数价格
+	EstimatedSettle Float64 `json:"P"` // 预估结算价格
 	FundingRate     Float64 `json:"r"` // 资金费率
 	NextFundingTime int64   `json:"T"` // 下一个资金费率时间
 }
@@ -391,4 +393,12 @@ func (s WsSwapPublicService) SubscribeSymbolsTicker(handler func(event WsTickerE
 // SubscribeAllTicker 订阅全市场信息
 func (s WsSwapPublicService) SubscribeAllTicker(handler func(event WsAllTickerEvent)) {
 	s.Subscribe("!ticker@arr", wsHandleWrapper(s.logger, handler))
+}
+
+// SubscribeBookTicker 订阅指定交易对的盘口信息
+func (s WsSwapPublicService) SubscribeBookTicker(handler func(event WsBookTickerEvent), symbols ...string) {
+	fn := wsHandleWrapper(s.logger, handler)
+	for _, symbol := range symbols {
+		s.Subscribe(fmt.Sprintf("%s@bookTicker", strings.ToLower(symbol)), fn)
+	}
 }

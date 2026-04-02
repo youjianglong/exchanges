@@ -363,3 +363,54 @@ func (s *FApiGetKLinesService) Do(ctx context.Context, opts ...RequestOption) ([
 	}
 	return res, nil
 }
+
+type FApiGetBookTickerService struct {
+	c      *Client
+	symbol *string
+}
+
+type FApiBookTicker struct {
+	Symbol   string  `json:"symbol"`   // 交易对
+	BidPrice Float64 `json:"bidPrice"` // 最高买价
+	BidQty   Float64 `json:"bidQty"`   // 最高买价挂单量
+	AskPrice Float64 `json:"askPrice"` // 最低卖价
+	AskQty   Float64 `json:"askQty"`   // 最低卖价挂单量
+	Time     int64   `json:"time"`     // 更新时间
+}
+
+func (c *Client) NewFApiGetBookTickerService() *FApiGetBookTickerService {
+	return &FApiGetBookTickerService{c: c}
+}
+
+func (s *FApiGetBookTickerService) Symbol(symbol string) *FApiGetBookTickerService {
+	s.symbol = &symbol
+	return s
+}
+
+func (s *FApiGetBookTickerService) Do(ctx context.Context, opts ...RequestOption) ([]*FApiBookTicker, error) {
+	r := &request{
+		method:   http.MethodGet,
+		endpoint: "/fapi/v1/ticker/bookTicker",
+		secType:  secTypeNone,
+		baseURL:  &s.c.FApiBaseURL,
+	}
+	if s.symbol != nil {
+		r.setParam("symbol", *s.symbol)
+	}
+	data, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if s.symbol != nil {
+		var res FApiBookTicker
+		if err := json.Unmarshal(data, &res); err != nil {
+			return nil, err
+		}
+		return []*FApiBookTicker{&res}, nil
+	}
+	var res []*FApiBookTicker
+	if err := json.Unmarshal(data, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
