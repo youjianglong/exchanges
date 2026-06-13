@@ -2,8 +2,9 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
+
+	. "github.com/youjianglong/exchanges/common"
 )
 
 type PingService struct {
@@ -50,7 +51,7 @@ func (s *PostService) Do(ctx context.Context, dest any, opts ...RequestOption) e
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, dest)
+	return StrictDecode(data, dest)
 }
 
 type GetService struct {
@@ -77,7 +78,7 @@ func (s *GetService) Do(ctx context.Context, dest any, opts ...RequestOption) er
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, dest)
+	return StrictDecode(data, dest)
 }
 
 func (c *Client) NewFApiPostService(endpoint string, params params) *PostService {

@@ -1,7 +1,6 @@
 package okx
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -65,7 +64,7 @@ func (s *OkxPublicStreamAdapter) subscribeSpotTickers(spotSymbols, swapSymbols [
 
 func (s *OkxPublicStreamAdapter) handleTickers(event *wsEvent) {
 	var tickers []*MarketTicker
-	err := json.Unmarshal(event.Data, &tickers)
+	err := common.StrictDecode(event.Data, &tickers)
 	if err != nil {
 		s.logger.Error("unmarshal tickers: " + err.Error())
 		return

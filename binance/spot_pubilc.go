@@ -51,13 +51,13 @@ func (s *GetSpotTickerPriceService) Do(ctx context.Context, opts ...RequestOptio
 	}
 	if s.symbol != nil {
 		var res TickerPrice
-		if err := json.Unmarshal(data, &res); err != nil {
+		if err := StrictDecode(data, &res); err != nil {
 			return nil, err
 		}
 		return []*TickerPrice{&res}, nil
 	}
 	var res []*TickerPrice
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -119,13 +119,13 @@ func (s *GetSpotTicker24HService) Do(ctx context.Context, opts ...RequestOption)
 	}
 	if s.symbol != nil {
 		var res SpotTicker24H
-		if err := json.Unmarshal(data, &res); err != nil {
+		if err := StrictDecode(data, &res); err != nil {
 			return nil, err
 		}
 		return []*SpotTicker24H{&res}, nil
 	}
 	var res []*SpotTicker24H
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -171,7 +171,7 @@ func (s *GetSpotSymbolInfosService) Do(ctx context.Context, opts ...RequestOptio
 		return nil, err
 	}
 	var res SpotSymbolInfos
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	var symbols []*SymbolInfo
@@ -188,7 +188,7 @@ func (s *GetSpotSymbolInfosService) Do(ctx context.Context, opts ...RequestOptio
 				continue
 			}
 			var lotSize LimitFilter
-			if err := json.Unmarshal(f, &lotSize); err != nil {
+			if err := StrictDecode(f, &lotSize); err != nil {
 				return nil, fmt.Errorf("unmarshal lotSize %s, %s: %w", s.Symbol, string(f), err)
 			}
 			switch lotSize.FilterType {

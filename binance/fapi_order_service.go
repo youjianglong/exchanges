@@ -2,8 +2,9 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
+
+	. "github.com/youjianglong/exchanges/common"
 )
 
 // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api
@@ -185,7 +186,7 @@ func (s *FApiOrderService) Do(ctx context.Context, opts ...RequestOption) (*Swap
 		return nil, err
 	}
 	var order SwapOrder
-	err = json.Unmarshal(resp, &order)
+	err = StrictDecode(resp, &order)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +236,7 @@ func (s *FApiCancelOrderService) Do(ctx context.Context, opts ...RequestOption) 
 		return nil, err
 	}
 	var order SwapOrder
-	err = json.Unmarshal(resp, &order)
+	err = StrictDecode(resp, &order)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +286,7 @@ func (s *FApiGetOrderService) Do(ctx context.Context, opts ...RequestOption) (*S
 		return nil, err
 	}
 	var order SwapOrder
-	err = json.Unmarshal(resp, &order)
+	err = StrictDecode(resp, &order)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +354,7 @@ func (s *FApiGetAllOrdersService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	var orders []*SwapOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +393,7 @@ func (s *FApiGetAllOpenOrdersService) Do(ctx context.Context, opts ...RequestOpt
 		return nil, err
 	}
 	var orders []*SwapOpenOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -496,7 +497,7 @@ func (s *FApiGetUserTradesService) Do(ctx context.Context, opts ...RequestOption
 		return nil, err
 	}
 	var trades []*TradeRecord
-	err = json.Unmarshal(resp, &trades)
+	err = StrictDecode(resp, &trades)
 	if err != nil {
 		return nil, err
 	}

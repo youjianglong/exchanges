@@ -2,9 +2,10 @@ package okx
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
+
+	. "github.com/youjianglong/exchanges/common"
 )
 
 // GetAssetWithdrawHistoryService 获取提币记录
@@ -88,7 +89,7 @@ func (s *GetAssetWithdrawHistoryService) Do(ctx context.Context, opts ...Request
 		return nil, err
 	}
 	res := []AssetWithdrawHistory{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -174,7 +175,7 @@ func (s *GetAssetDepositHistoryService) Do(ctx context.Context, opts ...RequestO
 		return nil, err
 	}
 	res := []AssetDepositHistory{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

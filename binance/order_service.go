@@ -2,7 +2,6 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -99,7 +98,7 @@ func (s *GetSpotOrdersService) Do(ctx context.Context, opts ...RequestOption) ([
 		return nil, err
 	}
 	var orders []*SpotOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +158,7 @@ func (s *GetSpotOpenOrdersService) Do(ctx context.Context, opts ...RequestOption
 		return nil, err
 	}
 	var orders []*SpotOpenOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +260,7 @@ func (s *GetPApiSwapOpenOrdersService) Do(ctx context.Context, opts ...RequestOp
 		return nil, err
 	}
 	var orders []*SwapOpenOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +333,7 @@ func (s *GetFApiSwapOrdersService) Do(ctx context.Context, opts ...RequestOption
 		return nil, err
 	}
 	var orders []*SwapOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +360,7 @@ func (s *GetFApiSwapOpenOrdersService) Do(ctx context.Context, opts ...RequestOp
 		return nil, err
 	}
 	var orders []*SwapOpenOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}

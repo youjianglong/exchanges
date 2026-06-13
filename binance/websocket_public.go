@@ -138,7 +138,7 @@ type combinedEvent struct {
 
 func (s *WsPublicBaseService) handleMsg(msg []byte) {
 	var event combinedEvent
-	err := json.Unmarshal(msg, &event)
+	err := StrictDecode(msg, &event)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("unmarshal message: %v", err))
 		return
@@ -195,7 +195,7 @@ func wsHandleWrapper[T any](logger *slog.Logger, handler func(event T)) func(dat
 	name := getTypeName[T]()
 	return func(data []byte) {
 		var event T
-		err := json.Unmarshal(data, &event)
+		err := StrictDecode(data, &event)
 		if err != nil {
 			logger.Error(fmt.Sprintf("unmarshal %s message: %v", name, err))
 			return
@@ -226,7 +226,7 @@ func NewWsSpotPublicService(baseUrl string) WsSpotPublicService {
 // WsMiniTickerEvent define websocket market mini-ticker statistics event
 type WsMiniTickerEvent struct {
 	Event       string  `json:"e"` // 事件类型
-	Time        int64   `json:"E"` // 事件时间
+	Time        Int64   `json:"E"` // 事件时间
 	Symbol      string  `json:"s"` // 交易对
 	LastPrice   Float64 `json:"c"` // 最新价格
 	OpenPrice   Float64 `json:"o"` // 开盘价格
@@ -242,9 +242,9 @@ type WsAllMiniTickerEvent []*WsMiniTickerEvent
 func (s WsSpotPublicService) SubscribeAllMiniTicker(handler func(event WsAllMiniTickerEvent)) {
 	s.Subscribe("!miniTicker@arr", func(data []byte) {
 		var event WsAllMiniTickerEvent
-		err := json.Unmarshal(data, &event)
+		err := StrictDecode(data, &event)
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("unmarshal message: %v", err))
+			s.logger.Error(fmt.Sprintf("unmarshal message: %v, data: %s", err, string(data)))
 			return
 		}
 		handler(event)
@@ -300,13 +300,13 @@ func (s WsSpotPublicService) SubscribeSymbolsTicker(handler func(event WsTickerE
 }
 
 type WsBookTickerEvent struct {
-	UpdateID int64   `json:"u"` // 更新ID
+	UpdateID Int64   `json:"u"` // 更新ID
 	Symbol   string  `json:"s"` // 交易对
 	BidPrice Float64 `json:"b"` // 最高买价
 	BidQty   Float64 `json:"B"` // 最高买价挂单量
 	AskPrice Float64 `json:"a"` // 最低卖价
 	AskQty   Float64 `json:"A"` // 最低卖价挂单量
-	Time     int64   `json:"E"` // 事件时间
+	Time     Int64   `json:"E"` // 事件时间
 }
 
 // SubscribeSymbolsBookTicker 订阅指定交易对的盘口信息

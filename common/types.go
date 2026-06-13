@@ -100,7 +100,7 @@ func (f *Float64) UnmarshalJSON(data []byte) error {
 	}
 	_, err := strconv.ParseFloat(str, 64)
 	if err != nil {
-		return fmt.Errorf("invalid float64 value: %s, error: %w", str, err)
+		return fmt.Errorf("invalid float64 value: %s, error: %w, data: %s", str, err, string(data))
 	}
 	*f = Float64(str)
 	return nil
@@ -146,7 +146,7 @@ func (i *Int64) UnmarshalJSON(data []byte) error {
 	}
 	_, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
-		return fmt.Errorf("invalid int64 value: %s, error: %w", str, err)
+		return fmt.Errorf("invalid int64 value: %s, error: %w, data: %s", str, err, string(data))
 	}
 	*i = Int64(str)
 	return nil

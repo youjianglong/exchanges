@@ -2,7 +2,6 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -43,7 +42,7 @@ func (s *GetUMAccountService) Do(ctx context.Context, opts ...RequestOption) (*U
 	}
 
 	res := new(UMAccount)
-	if err = json.Unmarshal(data, res); err != nil {
+	if err = StrictDecode(data, res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -87,7 +86,7 @@ func (s *GetUMAccountDetailService) Do(ctx context.Context, opts ...RequestOptio
 	}
 
 	res := new(UMAccountDetail)
-	if err = json.Unmarshal(data, res); err != nil {
+	if err = StrictDecode(data, res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -142,13 +141,13 @@ func (s *GetPApiAccountBalanceService) Do(ctx context.Context, opts ...RequestOp
 	var res []*PApiAccountBalance
 	if s.asset != nil {
 		r := new(PApiAccountBalance)
-		err = json.Unmarshal(data, r)
+		err = StrictDecode(data, r)
 		if err != nil {
 			return nil, err
 		}
 		res = append(res, r)
 	} else {
-		err = json.Unmarshal(data, &res)
+		err = StrictDecode(data, &res)
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +204,7 @@ func (s *PapiUMGetPositionRiskService) Do(ctx context.Context, opts ...RequestOp
 	}
 
 	var res []UMPosition
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -288,7 +287,7 @@ func (s *PApiUmGetIncomeService) Do(ctx context.Context, opts ...RequestOption) 
 		return nil, err
 	}
 	var res []Income
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

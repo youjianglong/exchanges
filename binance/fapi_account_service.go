@@ -2,7 +2,6 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -40,7 +39,7 @@ func (s *FApiGetAccountBalanceService) Do(ctx context.Context, opts ...RequestOp
 		return nil, err
 	}
 	var res []*FApiAccountBalance
-	err = json.Unmarshal(data, &res)
+	err = StrictDecode(data, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +85,7 @@ func (s *FApiGetPositionsService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	var risks []*Position
-	err = json.Unmarshal(resp, &risks)
+	err = StrictDecode(resp, &risks)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +167,7 @@ func (s *FApiGetIncomeService) Do(ctx context.Context, opts ...RequestOption) ([
 		return nil, err
 	}
 	var res []Income
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

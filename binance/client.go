@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -198,7 +197,7 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 
 	if res.StatusCode >= http.StatusBadRequest {
 		apiErr := new(APIError)
-		e := json.Unmarshal(data, apiErr)
+		e := StrictDecode(data, apiErr)
 		if e != nil {
 			c.debug("failed to unmarshal json: %s", e)
 		}

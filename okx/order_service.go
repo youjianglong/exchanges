@@ -2,7 +2,6 @@ package okx
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -137,7 +136,7 @@ func (s *GetOrderHistoryService) Do(ctx context.Context, opts ...RequestOption) 
 		return nil, err
 	}
 	var orders []*Order
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +244,7 @@ func (s *GetOrdersPendingService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	var orders []*PendingOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +325,7 @@ func (s *TradeOrderService) Do(ctx context.Context, opts ...RequestOption) (*Ord
 		return nil, err
 	}
 	var results []OrderResult
-	err = json.Unmarshal(resp, &results)
+	err = StrictDecode(resp, &results)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +375,7 @@ func (s *GetOrderService) Do(ctx context.Context, opts ...RequestOption) (*Order
 		return nil, err
 	}
 	var orders []*Order
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -525,9 +524,50 @@ func (s *GetTradeFillService) Do(ctx context.Context, opts ...RequestOption) ([]
 		return nil, err
 	}
 	var fills []TradeFill
-	err = json.Unmarshal(resp, &fills)
+	err = StrictDecode(resp, &fills)
 	if err != nil {
 		return nil, err
 	}
 	return fills, nil
+}
+
+// CancelOrderService 撤销订单 POST /api/v5/trade/cancel-order
+type CancelOrderService struct {
+	c      *Client
+	instId string
+	ordId  *string
+}
+
+func (c *Client) NewCancelOrderService(instId string) *CancelOrderService {
+	return &CancelOrderService{c: c, instId: instId}
+}
+
+func (s *CancelOrderService) OrdId(ordId string) *CancelOrderService {
+	s.ordId = &ordId
+	return s
+}
+
+func (s *CancelOrderService) Do(ctx context.Context, opts ...RequestOption) (*OrderResult, error) {
+	r := &request{
+		method:   http.MethodPost,
+		endpoint: "/api/v5/trade/cancel-order",
+		secType:  secTypeSigned,
+	}
+	r.setData("instId", s.instId)
+	if s.ordId != nil {
+		r.setData("ordId", *s.ordId)
+	}
+	resp, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+	var results []OrderResult
+	err = StrictDecode(resp, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, errors.New("no cancel result")
+	}
+	return &results[0], nil
 }

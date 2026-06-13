@@ -53,13 +53,13 @@ func (s *GetPremiumIndexService) Do(ctx context.Context, opts ...RequestOption) 
 	}
 	if s.symbol == nil {
 		var res []*PremiumIndex
-		if err := json.Unmarshal(data, &res); err != nil {
+		if err := StrictDecode(data, &res); err != nil {
 			return nil, err
 		}
 		return res, nil
 	}
 	var res PremiumIndex
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return []*PremiumIndex{&res}, nil
@@ -106,7 +106,7 @@ func (s *GetFApiSymbolInfosService) Do(ctx context.Context, opts ...RequestOptio
 		return nil, err
 	}
 	var res FApiSymbolInfos
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	var symbols []*SymbolInfo
@@ -130,7 +130,7 @@ func (s *GetFApiSymbolInfosService) Do(ctx context.Context, opts ...RequestOptio
 				continue
 			}
 			var lotSize LimitFilter
-			if err := json.Unmarshal(f, &lotSize); err != nil {
+			if err := StrictDecode(f, &lotSize); err != nil {
 				return nil, fmt.Errorf("unmarshal lotSize %s, %s: %w", s.Symbol, string(f), err)
 			}
 			switch lotSize.FilterType {
@@ -186,13 +186,13 @@ func (s *GetFApiTickerPriceService) Do(ctx context.Context, opts ...RequestOptio
 	}
 	if s.symbol != nil {
 		var res TickerPrice
-		if err := json.Unmarshal(data, &res); err != nil {
+		if err := StrictDecode(data, &res); err != nil {
 			return nil, err
 		}
 		return []*TickerPrice{&res}, nil
 	}
 	var res []*TickerPrice
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -248,13 +248,13 @@ func (s *GetFApiTicker24HService) Do(ctx context.Context, opts ...RequestOption)
 	}
 	if s.symbol != nil {
 		var res FApiTicker24H
-		if err := json.Unmarshal(data, &res); err != nil {
+		if err := StrictDecode(data, &res); err != nil {
 			return nil, err
 		}
 		return []*FApiTicker24H{&res}, nil
 	}
 	var res []*FApiTicker24H
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -300,7 +300,7 @@ func (s *FApiGetDepthService) Do(ctx context.Context, opts ...RequestOption) (*D
 		return nil, err
 	}
 	var res Depth
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -358,7 +358,7 @@ func (s *FApiGetKLinesService) Do(ctx context.Context, opts ...RequestOption) ([
 		return nil, err
 	}
 	var res [][]Mixed
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -375,7 +375,7 @@ type FApiBookTicker struct {
 	BidQty   Float64 `json:"bidQty"`   // 最高买价挂单量
 	AskPrice Float64 `json:"askPrice"` // 最低卖价
 	AskQty   Float64 `json:"askQty"`   // 最低卖价挂单量
-	Time     int64   `json:"time"`     // 更新时间
+	Time     Int64   `json:"time"`     // 更新时间
 }
 
 func (c *Client) NewFApiGetBookTickerService() *FApiGetBookTickerService {
@@ -403,13 +403,13 @@ func (s *FApiGetBookTickerService) Do(ctx context.Context, opts ...RequestOption
 	}
 	if s.symbol != nil {
 		var res FApiBookTicker
-		if err := json.Unmarshal(data, &res); err != nil {
+		if err := StrictDecode(data, &res); err != nil {
 			return nil, err
 		}
 		return []*FApiBookTicker{&res}, nil
 	}
 	var res []*FApiBookTicker
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

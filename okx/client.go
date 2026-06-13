@@ -180,31 +180,31 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 	c.debug("response body: %s", string(data))
 	if res.StatusCode >= http.StatusBadRequest {
 		apiErr := new(APIError)
-		if err := json.Unmarshal(data, apiErr); err != nil {
+		if err := common.StrictDecode(data, apiErr); err != nil {
 			c.debug("failed to unmarshal error: %v", err)
 		}
 		return nil, apiErr
 	}
 
-	var common struct {
+	var apiResp struct {
 		Code  string          `json:"code"`
 		Msg   string          `json:"msg"`
 		Data  json.RawMessage `json:"data"`
 		SCode string          `json:"sCode"`
 		SMsg  string          `json:"sMsg"`
 	}
-	if err := json.Unmarshal(data, &common); err != nil {
+	if err := common.StrictDecode(data, &apiResp); err != nil {
 		return nil, err
 	}
-	if common.Code != "0" {
+	if apiResp.Code != "0" {
 		var errMsg string
-		if common.SCode != "" {
-			errMsg = common.SCode + ": " + common.SMsg
+		if apiResp.SCode != "" {
+			errMsg = apiResp.SCode + ": " + apiResp.SMsg
 		} else {
-			errMsg = common.Msg
+			errMsg = apiResp.Msg
 		}
 		return nil, fmt.Errorf("API error: %s", errMsg)
 	}
 	// 返回 data 部分的原始 JSON 数据
-	return common.Data, nil
+	return apiResp.Data, nil
 }

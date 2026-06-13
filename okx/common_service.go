@@ -2,7 +2,6 @@ package okx
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -73,7 +72,7 @@ func (s *GetMarketIndexTickersService) Do(ctx context.Context, opts ...RequestOp
 		return nil, err
 	}
 	var tickers []*MarketIndexTicker
-	err = json.Unmarshal(data, &tickers)
+	err = StrictDecode(data, &tickers)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +162,7 @@ func (s *GetInstrumentsService) Do(ctx context.Context, opts ...RequestOption) (
 		return nil, err
 	}
 	var instruments []*Instrument
-	err = json.Unmarshal(data, &instruments)
+	err = StrictDecode(data, &instruments)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +226,7 @@ func (s *GetMarketTickersService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	var tickers []*MarketTicker
-	err = json.Unmarshal(data, &tickers)
+	err = StrictDecode(data, &tickers)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +272,7 @@ func (s *GetFundingRateService) Do(ctx context.Context, opts ...RequestOption) (
 		return nil, err
 	}
 	var fundingRates []*FundingRate
-	err = json.Unmarshal(data, &fundingRates)
+	err = StrictDecode(data, &fundingRates)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +308,7 @@ func (s *GetPriceLimitService) Do(ctx context.Context, opts ...RequestOption) ([
 		return nil, err
 	}
 	var priceLimits []*PriceLimit
-	err = json.Unmarshal(data, &priceLimits)
+	err = StrictDecode(data, &priceLimits)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +360,7 @@ func (s *GetMarkPriceService) Do(ctx context.Context, opts ...RequestOption) ([]
 		return nil, err
 	}
 	var markPrices []*MarkPrice
-	err = json.Unmarshal(data, &markPrices)
+	err = StrictDecode(data, &markPrices)
 	if err != nil {
 		return nil, err
 	}

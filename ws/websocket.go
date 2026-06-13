@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/youjianglong/exchanges/common"
 	"github.com/youjianglong/exchanges/errorx"
 	"github.com/youjianglong/exchanges/types"
 
@@ -383,7 +384,7 @@ func (w *Websocket) ReadJSON(v any) error {
 	if w.logIn != nil {
 		w.logIn(int(msgType), message)
 	}
-	return json.Unmarshal(message, v)
+	return common.StrictDecode(message, v)
 }
 
 func (w *Websocket) Conn() *websocket.Conn {

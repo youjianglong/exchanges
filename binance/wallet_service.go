@@ -2,7 +2,6 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -49,7 +48,7 @@ func (s *GetWalletBalanceService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	res := []WalletBalance{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -85,7 +84,7 @@ func (s *GetUserAssetService) Do(ctx context.Context, opts ...RequestOption) ([]
 		return nil, err
 	}
 	res := []UserAsset{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -205,7 +204,7 @@ func (s *CapitalWithdrawHistoryService) Do(ctx context.Context, opts ...RequestO
 		return nil, err
 	}
 	res := []CapitalWithdrawHistory{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -322,7 +321,7 @@ func (s *CapitalDepositHistoryService) Do(ctx context.Context, opts ...RequestOp
 		return nil, err
 	}
 	res := []CapitalDepositHistory{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	exc "github.com/youjianglong/exchanges/common"
 	"github.com/youjianglong/exchanges/okx/common"
 	"github.com/youjianglong/exchanges/ws"
 
@@ -117,7 +118,7 @@ type wsEvent struct {
 
 func (a *AdapterWebsocket) handleMsg(msg []byte) {
 	var event wsEvent
-	err := json.Unmarshal(msg, &event)
+	err := exc.StrictDecode(msg, &event)
 	if err != nil {
 		a.logger.Error("unmarshal error: " + err.Error())
 		return

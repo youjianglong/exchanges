@@ -2,7 +2,6 @@ package binance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -132,7 +131,7 @@ func (s *PApiUmOrderService) Do(ctx context.Context, opts ...RequestOption) (*Sw
 		return nil, err
 	}
 	var order *SwapOrder
-	err = json.Unmarshal(resp, &order)
+	err = StrictDecode(resp, &order)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +184,7 @@ func (s *PApiUmCancelOrderService) Do(ctx context.Context, opts ...RequestOption
 		return nil, err
 	}
 	var order *SwapOrder
-	err = json.Unmarshal(resp, &order)
+	err = StrictDecode(resp, &order)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +246,7 @@ func (s *PApiGetOpenOrdersService) Do(ctx context.Context, opts ...RequestOption
 		return nil, err
 	}
 	var orders []*SwapOpenOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +312,7 @@ func (s *PApiGetAllOrdersService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	var orders []*SwapOrder
-	err = json.Unmarshal(resp, &orders)
+	err = StrictDecode(resp, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +399,7 @@ func (s *PApiUmGetUserTradesService) Do(ctx context.Context, opts ...RequestOpti
 		return nil, err
 	}
 	var trades []*TradeRecord
-	err = json.Unmarshal(resp, &trades)
+	err = StrictDecode(resp, &trades)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +447,7 @@ func (s *PApiUmGetOrderService) Do(ctx context.Context, opts ...RequestOption) (
 		return nil, err
 	}
 	var order *SwapOrder
-	err = json.Unmarshal(resp, &order)
+	err = StrictDecode(resp, &order)
 	if err != nil {
 		return nil, err
 	}

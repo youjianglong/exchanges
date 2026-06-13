@@ -2,7 +2,6 @@ package okx
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	. "github.com/youjianglong/exchanges/common"
@@ -56,7 +55,7 @@ func (s *GetAccountBalanceService) Do(ctx context.Context, opts ...RequestOption
 		return nil, err
 	}
 	var res []AccountBalance
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	if len(res) == 0 {
@@ -108,7 +107,7 @@ func (s *GetAccountPositionsService) Do(ctx context.Context, opts ...RequestOpti
 		return nil, err
 	}
 	res := []AccountPosition{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -142,7 +141,7 @@ func (s *GetAssetBalancesService) Do(ctx context.Context, opts ...RequestOption)
 		return nil, err
 	}
 	res := []AssetBalance{}
-	if err = json.Unmarshal(data, &res); err != nil {
+	if err = StrictDecode(data, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
